@@ -344,23 +344,29 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
             ModuleLogger log = Module.getModuleLogger();
             log.trace("No JAR paths were found in the JAR file path %s", relativePath);
         } else do {
-            final JarEntry jarEntry = entries.nextElement();
-            final String name = jarEntry.getName();
-            final int idx = name.lastIndexOf('/');
-            if (idx == -1) continue;
-            final String path = name.substring(0, idx);
-            if (path.isEmpty() || path.endsWith("/")) {
-                // invalid name, just skip...
-                continue;
-            }
-            if (relativePath == null) {
-                index.add(path);
-            } else {
-                if (path.startsWith(relativePath + "/")) {
-                    index.add(path.substring(relativePath.length() + 1));
-                }
-            }
+            addEntryPath(entries.nextElement(), relativePath, index);
         } while (entries.hasMoreElements());
+
+        if (jarFile.isMultiRelease()) {
+            jarFile.versionedStream().forEach(entry -> addEntryPath(entry, relativePath, index));
+        }
+    }
+
+    private static void addEntryPath(final JarEntry entry, final String relativePath, final Collection<String> index) {
+        final String name = entry.getName();
+        final int idx = name.lastIndexOf('/');
+        if (idx == -1) return;
+        final String path = name.substring(0, idx);
+        if (path.isEmpty() || path.endsWith("/")) {
+            return;
+        }
+        if (relativePath == null) {
+            index.add(path);
+        } else {
+            if (path.startsWith(relativePath + "/")) {
+                index.add(path.substring(relativePath.length() + 1));
+            }
+        }
     }
 
     private static final CodeSigners EMPTY_CODE_SIGNERS = new CodeSigners(new CodeSigner[0]);
